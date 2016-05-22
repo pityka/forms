@@ -38,10 +38,6 @@ trait Tuples {
       [#h1.set(t._1)#
       ]
     }
-    def enable(b: Boolean) = {
-      [#h1.enable(b)#
-      ]
-    }
     def notify(t: Try[T] => Unit) = {
       [#h1.notify((e: Try[T1]) => t(this.get))#
       ]
@@ -50,26 +46,33 @@ trait Tuples {
 }#
 ]
 
-  [#def tupledFun[[#T1#]]([#tf1: Factory[T1]#])(combine: Seq[Node] => Node) =
+  [#def tupledFun[[#T1#]]([#tf1: Factory[T1]#])(combine: Seq[ViewHandle] => ViewHandle) =
     new Factory[Tuple1[[#T1#]]] {
     def make = {
       [#val (h1, n1) = tf1.make#
       ]
-
       val h = tupleHandle([#h1#])
       (h, combine(List([#n1#])))
     }
   }#
   ]
 
-  implicit class PimpedTypedTag(tag:TypedTag[Element]) {
+  implicit class PimpedTypedTag(tag:TypedTag[HTMLElement]) {
     [#def zip[[#T1#]]([#tf1: Factory[T1]#]) =
       new Factory[Tuple1[[#T1#]]] {
       def make = {
         [#val (h1, n1) = tf1.make#
         ]
         val h = tupleHandle([#h1#])
-        val nn : Node = tag([#n1#]).render
+        val nn : ViewHandle =new ViewHandle {
+          def enable(b: Boolean): Unit = {
+            [#n1.enable(b)#
+            ]
+          }
+          def flash(s: String): Unit = ()
+          val anchor = tag([#n1.anchor#]).render
+        }
+
         (h, nn)
       }
     }#

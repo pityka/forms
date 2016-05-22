@@ -33,34 +33,39 @@ trait Widgets {
     def get = Success(elem.value)
     def set(t: String) = elem.value = t
     def notify(f: Try[String] => Unit) = elem.onchange = (e: Event) => f(get)
-    def enable(b: Boolean) = elem.disabled = !b
   }
 
   def handle(elem: HTMLTextAreaElement) = new Handle[String] {
     def get = Success(elem.value)
     def set(t: String) = elem.value = t
     def notify(f: Try[String] => Unit) = elem.oninput = (e: Event) => f(get)
-    def enable(b: Boolean) = elem.disabled = !b
   }
 
   def handle(elem: HTMLInputElement) = new Handle[String] {
     def get = Success(elem.value)
     def set(t: String) = elem.value = t
     def notify(f: Try[String] => Unit) = elem.oninput = (e: Event) => f(get)
-    def enable(b: Boolean) = elem.disabled = !b
   }
 
   def textForm(attributes: Modifier*) = new Factory[String] {
     def make = {
       val inputE = textarea(attributes).render
-      (handle(inputE), inputE)
+      (handle(inputE), new ViewHandle {
+        val anchor = inputE
+        def enable(b: Boolean) = inputE.disabled = !b
+        def flash(s: String) = ()
+      })
     }
   }
 
   def selectForm(values: List[(String, String)], attributes: Modifier*) = new Factory[String] {
     def make = {
       val inputE = select(attributes)(values.map(x => option(value := x._1)(x._2))).render
-      (handle(inputE), inputE)
+      (handle(inputE), new ViewHandle {
+        val anchor = inputE
+        def enable(b: Boolean) = inputE.disabled = !b
+        def flash(s: String) = ()
+      })
     }
   }
 
@@ -71,22 +76,29 @@ trait Widgets {
         def get = Success(inputE.checked)
         def set(t: Boolean) = inputE.checked = t
         def notify(f: Try[Boolean] => Unit) = inputE.onchange = (e: Event) => f(get)
-        def enable(b: Boolean) = inputE.disabled = !b
       }
-      (handle, inputE)
+      (handle, new ViewHandle {
+        val anchor = inputE
+        def enable(b: Boolean) = inputE.disabled = !b
+        def flash(s: String) = ()
+      })
     }
   }
 
   def inputForm(attributes: Modifier*) = new Factory[String] {
     def make = {
       val inputE = input(attributes).render
-      (handle(inputE), inputE)
+      (handle(inputE), new ViewHandle {
+        val anchor = inputE
+        def enable(b: Boolean) = inputE.disabled = !b
+        def flash(s: String) = ()
+      })
     }
   }
 
   def tableForm[T](
-    tableTag: TypedTag[Element],
-    tbodyTag: TypedTag[Element],
+    tableTag: TypedTag[HTMLElement],
+    tbodyTag: TypedTag[HTMLElement],
     addButtonTag: TypedTag[HTMLElement] = button(`type` := "button", "Add row"),
     removeButtonTag: TypedTag[HTMLElement] = button(`type` := "button", "Remove")
   )(implicit f: Factory[T]) = new Factory[Seq[T]] {
@@ -94,15 +106,26 @@ trait Widgets {
       val c = tbodyTag.render
 
       val (h1, row1) = f.make
-      val buf = scala.collection.mutable.Buffer(h1)
-      var notifyFun: Option[() => Unit] = None
+      val buf = scala.collection.mutable.Buffer(h1 -> row1)
+
+      def currentValue = Try(buf.map(_._1.get.get))
+
+      var notifyFun: Option[Try[Seq[T]] => Unit] = None
 
       val removeButton = removeButtonTag(onclick := { (e: Event) =>
-        c.childNodes.toList.zipWithIndex.find(_._1 == row1).map(_._2).foreach(i => buf.remove(i))
-        c.removeChild(row1)
+
+        c
+          .childNodes
+          .toList
+          .zipWithIndex
+          .find(_._1 == row1)
+          .map(_._2)
+          .foreach(i => buf.remove(i))
+
+        c.removeChild(row1.anchor)
       }).render
-      row1.appendChild(td(`style` := "vertical-align: middle !important;")(removeButton).render)
-      c.appendChild(row1)
+      row1.anchor.appendChild(td(`style` := "vertical-align: middle !important;")(removeButton).render)
+      c.appendChild(row1.anchor)
 
       val buttons = scala.collection.mutable.Buffer(removeButton)
 
@@ -110,46 +133,62 @@ trait Widgets {
 
         val (h, n) = f.make
         val removeButton = removeButtonTag(onclick := { (e: Event) =>
-          c.childNodes.toList.zipWithIndex.find(_._1 == n).map(_._2).foreach(i => buf.remove(i))
-          c.removeChild(n)
+          c.childNodes.toList.zipWithIndex.find(_._1 == n.anchor).map(_._2).foreach(i => buf.remove(i))
+          c.removeChild(n.anchor)
+          notifyFun.foreach(t => t(currentValue))
         }).render
-        n.appendChild(td(removeButton).render)
-        buf.append(h)
-        c.appendChild(n)
+        n.anchor.appendChild(td(removeButton).render)
+        buf.append(h -> n)
+        c.appendChild(n.anchor)
         buttons.append(removeButton)
-        notifyFun.foreach(t => h.notify(k => t()))
+        notifyFun.foreach(t => h.notify(k => t(currentValue)))
 
       }).render
       buttons.append(b)
 
       val h = new Handle[Seq[T]] {
-        def enable(b: Boolean) = {
-          buf.foreach(_.enable(b))
-          buttons.foreach(_.disabled = (!b))
-        }
-        def get = Try(buf.map(_.get.get))
+        def get = currentValue
         def set(t: Seq[T]) = {
           buf.clear
           c.childNodes.foreach(ch => c.removeChild(ch))
           t.foreach { t =>
             val (h, n) = f.make
             val removeButton = removeButtonTag(onclick := { (e: Event) =>
-              c.childNodes.toList.zipWithIndex.find(_._1 == n).map(_._2).foreach(i => buf.remove(i))
-              c.removeChild(n)
+              c.childNodes.toList.zipWithIndex.find(_._1 == n.anchor).map(_._2).foreach(i => buf.remove(i))
+              c.removeChild(n.anchor)
+              notifyFun.foreach(t => t(currentValue))
             }).render
             h.set(t)
-            n.appendChild(td(removeButton).render)
-            buf.append(h)
-            c.appendChild(n)
+            n.anchor.appendChild(td(removeButton).render)
+            buf.append(h -> n)
+            c.appendChild(n.anchor)
             buttons.append(removeButton)
           }
         }
         def notify(f: Try[Seq[T]] => Unit) = {
-          notifyFun = Some(() => f(get))
-          buf.foreach(h => h.notify(t => f(get)))
+          notifyFun = Some(f)
+          buf.foreach(h => h._1.notify(t => f(get)))
         }
       }
-      (h, tableTag(c)(tfoot(b)).render)
+
+      val vn = new ViewHandle {
+        val anchor = tableTag(c)(tfoot(b)).render
+        def enable(b: Boolean) = {
+          buf.foreach(_._2.enable(b))
+          println("enable " + b)
+          println(buttons)
+          buttons.foreach { button =>
+
+            button.disabled = (!b)
+
+            if (b) button.style.pointerEvents = "auto"
+            else button.style.pointerEvents = "none"
+
+          }
+        }
+        def flash(s: String) = ()
+      }
+      (h, vn)
     }
   }
 

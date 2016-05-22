@@ -21,6 +21,7 @@
 package forms
 
 import org.scalajs.dom
+import org.scalajs.dom.raw.HTMLElement
 import scalatags.JsDom._
 import scalatags.JsDom.all._
 
@@ -28,16 +29,54 @@ object UIKit {
 
   val form = all.form(`class` := "uk-form uk-form-horizontal")
 
-  def formControl(modifiers: Modifier*) = WrappedFactory((e: dom.raw.Node) =>
-    div(`class` := "uk-form-row uk-width-large-1-1")(
-      label(`class` := "uk-form-label")(modifiers),
-      div(`class` := "uk-form-controls")(e)
-    ).render)
+  def flash[T](f: Factory[T]) = f.wrap { vn =>
+    val oldclass = vn.anchor.getAttribute("class")
+    new ViewHandle {
+      val anchor = vn.anchor
+      def enable(b: Boolean) = vn.enable(b)
+      def flash(s: String) =
+        if (s == "") anchor.setAttribute("class", oldclass)
+        else anchor.setAttribute("class", oldclass + " uk-form-danger")
+    }
+  }
+
+  def alert(alertTag: TypedTag[HTMLElement]) = WrappedFactory { (vn: ViewHandle) =>
+
+    val sp = alertTag.render
+
+    new ViewHandle {
+      val anchor = div()(
+        sp,
+        vn.anchor
+      ).render
+      def enable(b: Boolean) = vn.enable(b)
+      def flash(s: String) = sp.textContent = s
+    }
+  }
+
+  def formControl(modifiers: Modifier*) = WrappedFactory { (vn: ViewHandle) =>
+
+    val sp = span(`class` := "uk-alert-danger").render
+    val oldclass = vn.anchor.getAttribute("class")
+    new ViewHandle {
+      val anchor = div(`class` := "uk-form-row uk-width-large-1-1")(
+        label(`class` := "uk-form-label")(modifiers),
+        sp,
+        div(`class` := "uk-form-controls")(vn.anchor)
+      ).render
+      def enable(b: Boolean) = vn.enable(b)
+      def flash(s: String) = {
+        sp.textContent = s
+        if (s == "") vn.anchor.setAttribute("class", oldclass)
+        else vn.anchor.setAttribute("class", oldclass + " uk-form-danger")
+      }
+    }
+  }
 
   def tableForm[T](
     headers: Seq[String],
     widget: Factory[T]
-  ) = formControl("Table1")(
+  ) = (
     forms.tableForm(
       table(`class` := "uk-table uk-table-condensed uk-table-striped")(
         thead(headers.map(x => th(x)): _*)

@@ -26,7 +26,13 @@ import scalatags.JsDom._
 import scalatags.JsDom.all._
 
 trait ScalaTagPimp {
-  implicit class PimpledTypedTagWithWrap(tag: TypedTag[Element]) {
-    def wrap[T](f: Factory[T]) = f.wrap(e => tag(e).render)
+  implicit class PimpedTypedTagWithWrap(tag: TypedTag[HTMLElement]) {
+    def wrap[T](f: Factory[T]) = f.wrap { vn =>
+      new ViewHandle {
+        def enable(b: Boolean): Unit = vn.enable(b)
+        def flash(s: String): Unit = vn.flash(s)
+        val anchor = tag(vn.anchor).render
+      }
+    }
   }
 }

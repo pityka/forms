@@ -24,12 +24,11 @@ import org.scalajs.dom.raw.Node
 import scala.util._
 
 trait Seqs {
-  def sequence[T](combine: Seq[Node] => Node)(f: Seq[Factory[T]]) = new Factory[Seq[T]] {
+  def sequence[T](combine: Seq[ViewHandle] => ViewHandle)(f: Seq[Factory[T]]) = new Factory[Seq[T]] {
     def make = {
       val (hs, ns) = f.map(_.make).unzip
 
       val h = new Handle[Seq[T]] {
-        def enable(b: Boolean) = hs.foreach(_.enable(b))
         def get = Try(hs.map(_.get.get))
         def set(t: Seq[T]) = hs.zip(t).foreach(x => x._1.set(x._2))
         def notify(f: Try[Seq[T]] => Unit) = hs.foreach(h => h.notify(t => f(get)))
