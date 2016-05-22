@@ -20,15 +20,9 @@
  */
 package forms
 
-import scala.util._
-
-import org.scalajs.dom.raw._
-import org.scalajs.dom.ext._
+import org.scalajs.dom
 import scalatags.JsDom._
 import scalatags.JsDom.all._
-import scala.scalajs.js
-
-import org.scalajs.dom
 
 object UIKit {
 

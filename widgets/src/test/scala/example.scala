@@ -18,15 +18,12 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import forms._
-
 import scala.scalajs.js
-import js.annotation._
-import scalatags.JsDom._
-import scalatags.JsDom.all._
 import scala.util._
 
+import forms._
 import org.scalajs.dom
+import scalatags.JsDom.all._
 
 object Example extends js.JSApp {
 

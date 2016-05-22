@@ -20,12 +20,10 @@
  */
 package forms
 
-import scala.util._
-import scalatags.JsDom.all._
-import scalatags.JsDom._
-import scalatags._
-import org.scalajs.dom.raw._
 import org.scalajs.dom._
+import org.scalajs.dom.raw._
+import scalatags.JsDom._
+import scalatags.JsDom.all._
 
 trait ScalaTagPimp {
   implicit class PimpledTypedTagWithWrap(tag: TypedTag[Element]) {
