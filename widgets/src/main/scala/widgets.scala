@@ -175,8 +175,6 @@ trait Widgets {
         val anchor = tableTag(c)(tfoot(b)).render
         def enable(b: Boolean) = {
           buf.foreach(_._2.enable(b))
-          println("enable " + b)
-          println(buttons)
           buttons.foreach { button =>
 
             button.disabled = (!b)
