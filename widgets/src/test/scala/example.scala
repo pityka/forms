@@ -32,7 +32,8 @@ object Example extends js.JSApp {
     f1: Seq[BB],
     f2: Int,
     f3: String,
-    f4: Boolean
+    f4: Boolean,
+    f5: Any
   )
 
   def main(): Unit = {
@@ -53,19 +54,28 @@ object Example extends js.JSApp {
         )
       ).flashOnError
 
+    val choiceFactory = choice(
+      "1" -> checkbox(),
+      "2" -> textForm()
+    )(_ match {
+        case _: String => "2"
+        case _: Boolean => "1"
+      })(selectForm(List("1" -> "1", "2" -> "2")))
+
     val factory: Factory[AA] =
       UIKit.alert(h4(`class` := "uk-alert-danger"))(
         UIKit.form.zip(
           factoryB,
           UIKit.formControl("Label1")(textForm(`class` := "uk-width-1-1")).map(_.toInt)(_.toString).flashOnError,
           UIKit.formControl("Label2")(textForm(`class` := "uk-width-1-1")),
-          UIKit.formControl("Label3")(checkbox(`class` := "uk-width-1-1"))
-        ).map(tuple => AA(tuple._1, tuple._2, tuple._3, tuple._4))(aa => (aa.f1, aa.f2, aa.f3, aa.f4))
+          UIKit.formControl("Label3")(checkbox(`class` := "uk-width-1-1")),
+          UIKit.formControl("Label4")(choiceFactory)
+        ).map(tuple => AA(tuple._1, tuple._2, tuple._3, tuple._4, tuple._5))(aa => (aa.f1, aa.f2, aa.f3, aa.f4, aa.f5))
       ).flashOnError
 
     val (handle, viewhandle) = factory.make
 
-    handle.set(AA(List(BB("a", "b", 1), BB("a", "b", 2)), 1, "d", true))
+    handle.set(AA(List(BB("a", "b", 1), BB("a", "b", 2)), 1, "d", true, false))
 
     dom.document.body.appendChild(div(`class` := "uk-container")(viewhandle.anchor).render)
 

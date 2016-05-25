@@ -21,11 +21,13 @@
 package forms
 
 import scala.util._
+import scala.reflect.ClassTag
 import scalatags.JsDom.all._
 import scalatags.JsDom._
 import scalatags._
 import org.scalajs.dom.raw._
 import org.scalajs.dom._
+
 
 /* https://github.com/sbt/sbt-boilerplate */
 trait Tuples {
@@ -78,5 +80,60 @@ trait Tuples {
     }#
     ]
   }
+
+  [#def choice[S, K, [#T1 <: K: ClassTag#]](
+    [#ch1: (S, Factory[T1])#]
+  )(back: K => S)(selector: Factory[S]): Factory[K] =
+    new Factory[K] {
+      val parent = div().render
+
+      def make = {
+        val (selectorH, selectorView) = selector.make
+        [#val (h1, v1) = ch1._##2.make#
+        ]
+
+
+        def choices(s: S) = s match {
+          [#case x if x == ch1._##1 => (h1, v1)#
+          ]
+
+        }
+
+        parent.appendChild(currentView.anchor)
+
+        selectorH.notify { ts =>
+          ts.foreach { s =>
+            parent.replaceChild(currentView.anchor, parent.firstChild)
+          }
+        }
+
+        def currentView = selectorH.get.map(s => choices(s)._##2).getOrElse(v1)
+
+        val handle = new Handle[K] {
+          def get = selectorH.get.flatMap(s => choices(s)._##1.get)
+          def set(k: K) = {
+            selectorH.set(back(k))
+            k match {
+              [#case t: T1 => h1.set(t)#
+              ]
+
+            }
+          }
+          def notify(f: Try[K] => Unit) = {
+            [#h1.notify(t => f(get))#
+            ]
+
+          }
+        }
+        val view = new ViewHandle {
+
+          def enable(b: Boolean) = currentView.enable(b)
+          def flash(s: String) = currentView.flash(s)
+          val anchor = div(selectorView.anchor, parent).render
+        }
+        (handle, view)
+      }
+    }#
+    ]
 
 }

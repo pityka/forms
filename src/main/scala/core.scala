@@ -30,10 +30,15 @@ trait Handle[T] {
   def notify(f: Try[T] => Unit): Unit
 }
 
-trait ViewHandle {
+trait ViewHandle { self =>
   def enable(b: Boolean): Unit
   def flash(s: String): Unit
   val anchor: HTMLElement
+  def withAnchor(el: HTMLElement) = new ViewHandle {
+    def enable(b: Boolean) = self.enable(b)
+    def flash(s: String) = self.flash(s)
+    val anchor = el
+  }
 }
 
 trait Factory[T] { self =>
@@ -58,6 +63,12 @@ trait Factory[T] { self =>
     def make = {
       val (h, n) = self.make
       (h, f(n))
+    }
+  }
+  def wrapNode(f: HTMLElement => HTMLElement) = new Factory[T] {
+    def make = {
+      val (h, n) = self.make
+      (h, n.withAnchor(f(n.anchor)))
     }
   }
   def flashOnChange(fun: (Try[T], ViewHandle) => Unit) = new Factory[T] {

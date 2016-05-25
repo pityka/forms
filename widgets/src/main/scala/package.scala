@@ -22,3 +22,4 @@ package object forms
   extends Widgets
   with Tuples
   with ScalaTagPimp
+  with Seqs

@@ -20,21 +20,33 @@
  */
 package forms
 
-import org.scalajs.dom.raw.Node
+import org.scalajs.dom.raw._
+import scalatags.JsDom._
+import scalatags.JsDom.all._
 import scala.util._
+import scala.reflect.ClassTag
 
 trait Seqs {
-  def sequence[T](combine: Seq[ViewHandle] => ViewHandle)(f: Seq[Factory[T]]) = new Factory[Seq[T]] {
-    def make = {
-      val (hs, ns) = f.map(_.make).unzip
 
-      val h = new Handle[Seq[T]] {
-        def get = Try(hs.map(_.get.get))
-        def set(t: Seq[T]) = hs.zip(t).foreach(x => x._1.set(x._2))
-        def notify(f: Try[Seq[T]] => Unit) = hs.foreach(h => h.notify(t => f(get)))
+  def sequence[T](combine: Seq[ViewHandle] => ViewHandle)(f: Seq[Factory[T]]): Factory[Seq[T]] =
+    new Factory[Seq[T]] {
+      def make = {
+        val (hs, ns) = f.map(_.make).unzip
+
+        val h = new Handle[Seq[T]] {
+          def get = Try(hs.map(_.get.get))
+          def set(t: Seq[T]) = hs.zip(t).foreach(x => x._1.set(x._2))
+          def notify(f: Try[Seq[T]] => Unit) = hs.foreach(h => h.notify(t => f(get)))
+        }
+        (h, combine(ns))
       }
-      (h, combine(ns))
     }
-  }
+
+  def sequence[T](tag: TypedTag[HTMLElement])(f: Seq[Factory[T]]): Factory[Seq[T]] =
+    sequence(vns => new ViewHandle {
+      val anchor = tag(vns.map(_.anchor)).render
+      def enable(b: Boolean) = vns.foreach(_.enable(b))
+      def flash(s: String) = ()
+    })(f)
 
 }
